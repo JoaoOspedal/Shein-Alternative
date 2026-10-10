@@ -123,3 +123,12 @@ app.*.symbols
 
 # TCC (documento pessoal)
 *.docx
+
+# Prints do app original (contêm dados pessoais: nome, telefone, endereço)
+prints/
+
+# Diferenças geradas quando um teste de imagem falha
+test/failures/
+
+# Em aplicativos o pubspec.lock é versionado, para todos usarem as mesmas versões
+!pubspec.lock
