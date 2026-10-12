@@ -93,18 +93,13 @@ class _ListScreenState extends State<ListScreen> {
       ),
       body: Column(
         children: [
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              children: [
-                for (final c in [null, ...categories.map((c) => c.$1)])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _FilterChip(label: c ?? 'Todos', selected: _cat == c, onTap: () => setState(() => _cat = c)),
-                  ),
-              ],
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: FilterPills<String?>(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              options: [(null, 'Todos'), for (final c in categories) (c.$1, c.$1)],
+              value: _cat,
+              onChanged: (c) => setState(() => _cat = c),
             ),
           ),
           // H1: quantos resultados há e como estão ordenados.
@@ -143,21 +138,4 @@ class _ListScreenState extends State<ListScreen> {
     );
   }
 }
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _FilterChip({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Container(
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          color: selected ? ink : surface,
-          child: Text(label, style: TextStyle(fontSize: 13, color: selected ? Colors.white : ink, fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
-        ),
-      );
-}
+

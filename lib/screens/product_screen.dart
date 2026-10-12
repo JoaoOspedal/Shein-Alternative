@@ -14,6 +14,8 @@ class ProductScreen extends StatefulWidget {
 
 class _ProductScreenState extends State<ProductScreen> {
   final _sizeKey = GlobalKey();
+  final _reviewsKey = GlobalKey();
+  String _color = colorOptions.first.$1;
   String? _size;
   bool _sizeError = false;
   bool _moreDetails = false;
@@ -23,13 +25,16 @@ class _ProductScreenState extends State<ProductScreen> {
     // está a pendência em vez de falhar em silêncio.
     if (_size == null) {
       setState(() => _sizeError = true);
-      Scrollable.ensureVisible(_sizeKey.currentContext!, duration: const Duration(milliseconds: 250), alignment: 0.3);
+      _scrollTo(_sizeKey);
       return;
     }
-    cart.add(widget.product, _size!);
+    cart.add(widget.product, _size!, _color);
     // H1: confirmação da ação, com atalho para o próximo passo.
     toast(context, 'Adicionado ao carrinho', action: 'VER CARRINHO', onAction: () => goToTab(context, 2));
   }
+
+  void _scrollTo(GlobalKey key) =>
+      Scrollable.ensureVisible(key.currentContext!, duration: const Duration(milliseconds: 250), alignment: 0.3);
 
   void _sizeGuide() {
     showModalBottomSheet(
@@ -108,8 +113,9 @@ class _ProductScreenState extends State<ProductScreen> {
           ),
         ],
       ),
-      body: ListView(
-        children: [
+      // Coluna inteira montada: os atalhos de rolagem alcançam qualquer seção.
+      body: SingleChildScrollView(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(color: Colors.white, child: ProductImage(p, ratio: 1)),
           Container(
             color: Colors.white,
@@ -129,73 +135,65 @@ class _ProductScreenState extends State<ProductScreen> {
               // H2/H8: nome curto no lugar do título com palavras-chave em série.
               Text(p.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
-              Row(children: [
-                const Icon(Icons.star, size: 18, color: Color(0xFFFACF19)),
-                const SizedBox(width: 4),
-                Text('${p.rating.toStringAsFixed(1).replaceAll('.', ',')}  ·  ${p.reviews} avaliações', style: const TextStyle(fontSize: 13)),
-              ]),
-            ]),
-          ),
-          Section(
-            key: _sizeKey,
-            title: 'Tamanho',
-            // H10: uma única ajuda de medidas (o original tem duas entradas).
-            trailing: InkWell(
-              onTap: _sizeGuide,
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.straighten, size: 18),
-                SizedBox(width: 4),
-                Text('Guia de tamanhos', style: TextStyle(fontSize: 13, decoration: TextDecoration.underline)),
-              ]),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Wrap(spacing: 10, children: [
-                for (final s in sizes)
-                  Semantics(
-                    button: true,
-                    selected: _size == s,
-                    label: 'Tamanho $s',
-                    child: InkWell(
-                      onTap: () => setState(() {
-                        _size = s;
-                        _sizeError = false;
-                      }),
-                      child: Container(
-                        width: 60,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _size == s ? Colors.white : surface,
-                          border: Border.all(color: _size == s ? ink : (_sizeError ? promo : surface), width: 1.5),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(s, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ),
-              ]),
-              if (_sizeError)
-                const Padding(
-                  padding: EdgeInsets.only(top: 10),
+              // H7: a nota leva às avaliações (no original, uma aba "Comentários").
+              InkWell(
+                onTap: () => _scrollTo(_reviewsKey),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(children: [
-                    Icon(Icons.error_outline, size: 18, color: promo),
-                    SizedBox(width: 6),
-                    Text('Escolha um tamanho para adicionar ao carrinho.', style: TextStyle(color: promo, fontSize: 13)),
+                    const Icon(Icons.star, size: 18, color: star),
+                    const SizedBox(width: 4),
+                    Text(p.ratingLabel, style: const TextStyle(fontSize: 13)),
+                    const Text('  ·  ', style: TextStyle(fontSize: 13)),
+                    Text('${p.reviews} avaliações', style: const TextStyle(fontSize: 13, decoration: TextDecoration.underline)),
+                    Expanded(child: Text('  ·  ${p.soldLabel}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
                   ]),
                 ),
+              ),
+              if (p.national) const Padding(padding: EdgeInsets.only(top: 4), child: NationalTag()),
+            ]),
+          ),
+          // H6: cor e tamanho no mesmo bloco, com os mesmos controles da
+          // compra rápida.
+          Section(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              ColorPicker(value: _color, onChanged: (c) => setState(() => _color = c)),
+              const SizedBox(height: 20),
+              Row(key: _sizeKey, children: [
+                const Expanded(child: Text('Tamanho', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
+                // H10: uma única ajuda de medidas (o original tem duas entradas).
+                InkWell(
+                  onTap: _sizeGuide,
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.straighten, size: 18),
+                    SizedBox(width: 4),
+                    Text('Guia de tamanhos', style: TextStyle(fontSize: 13, decoration: TextDecoration.underline)),
+                  ]),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              SizePicker(
+                value: _size,
+                error: _sizeError,
+                onChanged: (s) => setState(() {
+                  _size = s;
+                  _sizeError = false;
+                }),
+              ),
             ]),
           ),
           // H2: prazo em datas, sem "60% de probabilidade de entrega".
           Section(
             title: 'Entrega e garantias',
             child: Column(children: [
-              _info(Icons.local_shipping_outlined, 'Frete grátis acima de ${brl(Cart.freeShippingFrom)}', subtitle: 'Chega entre 17 e 25 de outubro', color: good),
+              _info(Icons.local_shipping_outlined, 'Frete grátis acima de ${brl(Cart.freeShippingFrom)}', subtitle: p.national ? 'Envio nacional · chega entre 15 e 19 de outubro' : 'Chega entre 17 e 25 de outubro', color: good),
               const Divider(),
               _info(Icons.assignment_return_outlined, 'Devolução gratuita em até 20 dias'),
               const Divider(),
               _info(Icons.verified_user_outlined, 'Pagamento seguro e dados protegidos'),
             ]),
           ),
+          _Reviews(p, key: _reviewsKey),
           Section(
             title: 'Detalhes',
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -216,17 +214,9 @@ class _ProductScreenState extends State<ProductScreen> {
           ),
           Section(
             title: 'Você também pode gostar',
-            child: SizedBox(
-              height: 240,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: related.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) => SizedBox(width: 112, child: ProductCard(related[i])),
-              ),
-            ),
+            child: ProductStrip(related),
           ),
-        ],
+        ]),
       ),
       // H4/H8: um CTA com rótulo estável ("25% DE DESCONTO!" saiu do botão).
       bottomNavigationBar: Container(
@@ -242,6 +232,92 @@ class _ProductScreenState extends State<ProductScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// H8: das avaliações originais ficam a nota, o ajuste do tamanho e os
+/// comentários com a variação comprada. Saem as etiquetas de palavras-chave
+/// ("sem odores (5)"), o ícone de tradução e o menu "..." de cada comentário.
+class _Reviews extends StatefulWidget {
+  final Product product;
+  const _Reviews(this.product, {super.key});
+
+  @override
+  State<_Reviews> createState() => _ReviewsState();
+}
+
+class _ReviewsState extends State<_Reviews> {
+  final _helpful = <Review>{};
+  bool _all = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.product;
+    return Section(
+      title: 'Avaliações (${p.reviews})',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text(p.ratingLabel, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, height: 1)),
+          const SizedBox(width: 8),
+          Stars(p.rating, size: 22),
+        ]),
+        const SizedBox(height: 12),
+        // H5: o ajuste em uma frase ajuda a acertar o tamanho antes da compra.
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(4)),
+          child: const Row(children: [
+            Icon(Icons.straighten, size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('87% acharam o tamanho fiel', style: TextStyle(fontWeight: FontWeight.w600)),
+                Text('3% acharam pequeno · 10% acharam grande', style: TextStyle(color: muted, fontSize: 13)),
+              ]),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 4),
+        for (final r in _all ? reviews : reviews.take(3)) ...[
+          _review(r),
+          const Divider(),
+        ],
+        Center(
+          child: TextButton(
+            onPressed: () => setState(() => _all = !_all),
+            child: Text(_all ? 'Ver menos' : 'Ver mais avaliações', style: const TextStyle(color: ink, fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _review(Review r) {
+    final on = _helpful.contains(r);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text(r.user, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+          const SizedBox(width: 8),
+          Stars(r.stars.toDouble(), size: 15),
+          const Spacer(),
+          Text('${r.color} · Tamanho ${r.size}', style: const TextStyle(color: muted, fontSize: 12)),
+        ]),
+        const SizedBox(height: 6),
+        Text(r.text),
+        Align(
+          alignment: Alignment.centerRight,
+          // H1: o botão muda de estado ao marcar o comentário como útil.
+          child: TextButton.icon(
+            onPressed: () => setState(() => on ? _helpful.remove(r) : _helpful.add(r)),
+            style: TextButton.styleFrom(foregroundColor: on ? ink : muted, visualDensity: VisualDensity.compact),
+            icon: Icon(on ? Icons.thumb_up : Icons.thumb_up_outlined, size: 16),
+            label: Text('Útil (${r.helpful + (on ? 1 : 0)})', style: TextStyle(fontSize: 13, fontWeight: on ? FontWeight.w700 : FontWeight.w400)),
+          ),
+        ),
+      ]),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'data.dart';
 import 'screens/product_screen.dart';
+import 'screens/quick_view.dart';
 
 // Paleta da Shein: preto e branco, com laranja reservado a preço/desconto
 // e verde a benefícios (frete, segurança).
@@ -11,6 +12,7 @@ const good = Color(0xFF198055);
 const muted = Color(0xFF767676);
 const surface = Color(0xFFF6F6F6);
 const line = Color(0xFFE5E5E5);
+const star = Color(0xFFFACF19);
 
 void push(BuildContext context, Widget screen) =>
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
@@ -87,8 +89,70 @@ class ProductImage extends StatelessWidget {
       );
 }
 
-/// Card de produto: imagem, nome, preço e desconto — sem selos sobrepostos.
+class Stars extends StatelessWidget {
+  final double value;
+  final double size;
+  const Stars(this.value, {super.key, this.size = 18});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: 'Nota ${value.toStringAsFixed(1).replaceAll('.', ',')} de 5',
+        excludeSemantics: true,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (var i = 1; i <= 5; i++)
+            Icon(value >= i - 0.25 ? Icons.star : (value >= i - 0.75 ? Icons.star_half : Icons.star_border), size: size, color: star),
+        ]),
+      );
+}
+
+/// H2/H6: "Envio nacional" por extenso, no lugar da bandeira sobre a foto.
+class NationalTag extends StatelessWidget {
+  const NationalTag({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.local_shipping_outlined, size: 14, color: good),
+        SizedBox(width: 4),
+        Flexible(
+          child: Text('Envio nacional',
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: good, fontSize: 12, fontWeight: FontWeight.w600)),
+        ),
+      ]);
+}
+
+/// Mini carrinho do card: abre a compra rápida sem sair da lista.
+class QuickAddButton extends StatelessWidget {
+  final Product product;
+  const QuickAddButton(this.product, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        child: Tooltip(
+          message: 'Compra rápida',
+          child: Material(
+            color: surface,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => showQuickView(context, product),
+              child: const SizedBox(width: 40, height: 40, child: Icon(Icons.add_shopping_cart, size: 20, color: ink)),
+            ),
+          ),
+        ),
+      );
+}
+
+/// Card de produto: imagem, nome, vendidos, preço, desconto e envio nacional
+/// em texto — sem selos sobrepostos à foto.
 class ProductCard extends StatelessWidget {
+  /// Largura dos cards nas faixas horizontais.
+  static const compactWidth = 132.0;
+
+  /// Altura do bloco de texto abaixo da imagem (3:4).
+  static const infoHeight = 116.0;
+  static double heightFor(double width) => width * 4 / 3 + infoHeight;
+
   final Product product;
   const ProductCard(this.product, {super.key});
 
@@ -102,11 +166,40 @@ class ProductCard extends StatelessWidget {
           ProductImage(product),
           const SizedBox(height: 8),
           Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-          const SizedBox(height: 4),
-          Price(product.price),
           const SizedBox(height: 2),
-          Text('${product.off}% OFF', style: const TextStyle(color: promo, fontSize: 12)),
+          Text(product.soldLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: muted, fontSize: 12)),
+          const SizedBox(height: 4),
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Price(product.price),
+                const SizedBox(height: 2),
+                Text('${product.off}% OFF', style: const TextStyle(color: promo, fontSize: 12)),
+              ]),
+            ),
+            QuickAddButton(product),
+          ]),
+          if (product.national) const Padding(padding: EdgeInsets.only(top: 4), child: NationalTag()),
         ],
+      ),
+    );
+  }
+}
+
+/// Faixa horizontal de cards compactos.
+class ProductStrip extends StatelessWidget {
+  final List<Product> items;
+  const ProductStrip(this.items, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: ProductCard.heightFor(ProductCard.compactWidth),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => SizedBox(width: ProductCard.compactWidth, child: ProductCard(items[i])),
       ),
     );
   }
@@ -118,18 +211,157 @@ class ProductGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 20,
-        mainAxisExtent: 320,
+    const gap = 12.0;
+    return LayoutBuilder(
+      builder: (_, box) => GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: gap,
+          mainAxisSpacing: 20,
+          mainAxisExtent: ProductCard.heightFor((box.maxWidth - gap) / 2),
+        ),
+        itemCount: items.length,
+        itemBuilder: (_, i) => ProductCard(items[i]),
       ),
-      itemCount: items.length,
-      itemBuilder: (_, i) => ProductCard(items[i]),
+    );
+  }
+}
+
+/// Opção de variação (cor ou tamanho) com o mesmo estado de seleção.
+class _Choice extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool error;
+  final VoidCallback onTap;
+  final Widget child;
+  const _Choice({required this.label, required this.selected, this.error = false, required this.onTap, required this.child});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            height: 40,
+            constraints: const BoxConstraints(minWidth: 60),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: selected ? Colors.white : surface,
+              border: Border.all(color: selected ? ink : (error ? promo : surface), width: 1.5),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Center(widthFactor: 1, child: child),
+          ),
+        ),
+      );
+}
+
+/// H6: a amostra vem com o nome da cor, que também aparece no título.
+class ColorPicker extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+  const ColorPicker({super.key, required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text.rich(TextSpan(
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        children: [const TextSpan(text: 'Cor: '), TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w400))],
+      )),
+      const SizedBox(height: 10),
+      Wrap(spacing: 10, runSpacing: 10, children: [
+        for (final (name, color) in colorOptions)
+          _Choice(
+            label: 'Cor $name',
+            selected: value == name,
+            onTap: () => onChanged(name),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 16, height: 16, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+            ]),
+          ),
+      ]),
+    ]);
+  }
+}
+
+class SizePicker extends StatelessWidget {
+  final String? value;
+  final bool error;
+  final ValueChanged<String> onChanged;
+  const SizePicker({super.key, required this.value, this.error = false, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Wrap(spacing: 10, runSpacing: 10, children: [
+        for (final s in sizes)
+          _Choice(
+            label: 'Tamanho $s',
+            selected: value == s,
+            error: error,
+            onTap: () => onChanged(s),
+            child: Text(s, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+      ]),
+      if (error)
+        const Padding(
+          padding: EdgeInsets.only(top: 10),
+          child: Row(children: [
+            Icon(Icons.error_outline, size: 18, color: promo),
+            SizedBox(width: 6),
+            Expanded(child: Text('Escolha um tamanho para adicionar ao carrinho.', style: TextStyle(color: promo, fontSize: 13))),
+          ]),
+        ),
+    ]);
+  }
+}
+
+/// H4: a mesma faixa de filtros na busca, em "Mais vendidos" e no carrinho.
+class FilterPills<T> extends StatelessWidget {
+  final List<(T, String)> options;
+  final T value;
+  final ValueChanged<T> onChanged;
+  final EdgeInsets padding;
+  const FilterPills({super.key, required this.options, required this.value, required this.onChanged, this.padding = EdgeInsets.zero});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 32,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: padding,
+        itemCount: options.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final (option, label) = options[i];
+          final selected = option == value;
+          return Semantics(
+            button: true,
+            selected: selected,
+            child: InkWell(
+              onTap: () => onChanged(option),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                color: selected ? ink : surface,
+                child: Center(
+                  widthFactor: 1,
+                  child: Text(label,
+                      style: TextStyle(fontSize: 13, color: selected ? Colors.white : ink, fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -280,7 +512,8 @@ class EmptyState extends StatelessWidget {
 /// Campo de busca com o botão preto característico do app original.
 class SearchBox extends StatelessWidget {
   final VoidCallback onTap;
-  const SearchBox({super.key, required this.onTap});
+  final Color borderColor;
+  const SearchBox({super.key, required this.onTap, this.borderColor = ink});
 
   @override
   Widget build(BuildContext context) {
@@ -292,7 +525,7 @@ class SearchBox extends StatelessWidget {
         child: Container(
           height: 42,
           padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(border: Border.all(color: ink, width: 1.5), borderRadius: BorderRadius.circular(6)),
+          decoration: BoxDecoration(color: Colors.white, border: Border.all(color: borderColor, width: 1.5), borderRadius: BorderRadius.circular(6)),
           child: Row(children: [
             const SizedBox(width: 10),
             const Expanded(child: Text('Buscar produtos', style: TextStyle(color: muted, fontSize: 15))),

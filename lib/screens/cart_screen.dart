@@ -5,8 +5,15 @@ import '../widgets.dart';
 import 'checkout_screen.dart';
 import 'product_screen.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  bool _onlySale = false;
 
   void _remove(BuildContext context, CartItem item) {
     final index = cart.remove(item);
@@ -32,6 +39,11 @@ class CartScreen extends StatelessWidget {
           );
         }
         final missing = cart.missingForFreeShipping;
+        final sale = cart.items.where((i) => i.product.onSale).toList();
+        // H8: com um item só, o filtro não tem o que separar.
+        final canFilter = cart.items.length > 1;
+        final filtering = canFilter && _onlySale;
+        final shown = filtering ? sale : cart.items;
         return Scaffold(
           appBar: AppBar(title: Text('Carrinho (${cart.count})')),
           body: ListView(
@@ -80,7 +92,37 @@ class CartScreen extends StatelessWidget {
                     ),
                   ),
                   const Divider(),
-                  for (final item in cart.items) _CartRow(item, onRemove: () => _remove(context, item)),
+                  if (canFilter)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        FilterPills<bool>(
+                          options: [(false, 'Todos (${cart.items.length})'), (true, 'Em oferta (${sale.length})')],
+                          value: filtering,
+                          onChanged: (v) => setState(() => _onlySale = v),
+                        ),
+                        // H1: o filtro muda a lista, não o que será comprado.
+                        if (filtering)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              sale.isEmpty
+                                  ? 'Nenhum item do carrinho tem 30% OFF ou mais.'
+                                  : 'Itens com 30% OFF ou mais. O total continua somando todos os selecionados.',
+                              style: const TextStyle(color: muted, fontSize: 13),
+                            ),
+                          ),
+                      ]),
+                    ),
+                  for (final item in shown) _CartRow(item, onRemove: () => _remove(context, item)),
+                  if (shown.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: TextButton(
+                        onPressed: () => setState(() => _onlySale = false),
+                        child: const Text('Ver todos os itens', style: TextStyle(color: ink, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
                 ]),
               ),
               const SizedBox(height: 16),
@@ -146,11 +188,16 @@ class _CartRow extends StatelessWidget {
                 ),
               ),
             ]),
-            Text('Tamanho ${item.size}', style: const TextStyle(color: muted, fontSize: 13)),
+            Text(item.variant, style: const TextStyle(color: muted, fontSize: 13)),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(
-                child: Wrap(crossAxisAlignment: WrapCrossAlignment.end, spacing: 6, children: [Price(p.price), OldPrice(p.oldPrice)]),
+                child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 6, runSpacing: 4, children: [
+                  Price(p.price),
+                  OldPrice(p.oldPrice),
+                  // H6: o selo mostra quais itens o filtro "Em oferta" reúne.
+                  if (p.onSale) OffTag(p.off),
+                ]),
               ),
               QtyStepper(value: item.qty, onChanged: (v) => cart.setQty(item, v)),
             ]),

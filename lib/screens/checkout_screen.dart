@@ -159,7 +159,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(it.product.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            Text('Tamanho ${it.size}', style: const TextStyle(color: muted, fontSize: 13)),
+                            Text(it.variant, style: const TextStyle(color: muted, fontSize: 13)),
                             const SizedBox(height: 6),
                             Row(children: [
                               Expanded(child: Price(it.product.price, size: 16)),

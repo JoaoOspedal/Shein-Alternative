@@ -43,16 +43,70 @@ void main() {
 
     await tester.pumpWidget(const SheinAlternativeApp());
     expect(find.text('Super Ofertas'), findsOneWidget);
+    expect(find.byTooltip('Mensagens'), findsOneWidget);
     await shot(tester, '1_home');
+
+    // O carrossel troca sozinho de banner.
+    expect(find.bySemanticsLabel('Camisetas com até 62% OFF. Comprar agora'), findsNothing);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Camisetas com até 62% OFF. Comprar agora'), findsOneWidget);
+    await shot(tester, '10_home_carrossel');
 
     await tester.drag(find.text('Super Ofertas'), const Offset(0, -520));
     await tester.pumpAndSettle();
     await shot(tester, '2_home_rolada');
 
+    // Filtros de "Mais vendidos".
+    expect(find.text('Camiseta Texturizada'), findsOneWidget);
+    await tester.tap(find.text('Em oferta'));
+    await tester.pumpAndSettle();
+    expect(find.text('Camiseta Texturizada'), findsNothing);
+    expect(find.text('Jeans Reto Estampa Vermelha'), findsOneWidget);
+    await shot(tester, '11_home_filtro');
+    await tester.tap(find.text('Todos'));
+    await tester.pumpAndSettle();
+
+    // Compra rápida pelo mini carrinho do card.
+    expect(find.text('+12 mil vendidos'), findsOneWidget);
+    await tester.tap(find.byTooltip('Compra rápida').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Ver detalhes'), findsOneWidget);
+    await shot(tester, '8_compra_rapida');
+
+    await tester.tap(find.text('ADICIONAR AO CARRINHO'));
+    await tester.pumpAndSettle();
+    expect(cart.count, 0);
+    expect(find.text('Escolha um tamanho para adicionar ao carrinho.'), findsOneWidget);
+
+    await tester.tap(find.text('Cinza'));
+    await tester.tap(find.text('G'));
+    await tester.pump();
+    await tester.tap(find.text('ADICIONAR AO CARRINHO'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ver detalhes'), findsNothing);
+    expect(cart.items.single.variant, 'Cinza · Tamanho G');
+    cart.items.clear();
+    ScaffoldMessenger.of(tester.element(find.text('Super Ofertas'))).removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Camiseta Estampa Gótica'));
     await tester.pumpAndSettle();
     expect(find.text('ADICIONAR AO CARRINHO'), findsOneWidget);
     await shot(tester, '3_produto');
+
+    // A nota leva às avaliações.
+    await tester.tap(find.text('4210 avaliações'));
+    await tester.pumpAndSettle();
+    expect(find.text('Avaliações (4210)'), findsOneWidget);
+    await shot(tester, '9_produto_avaliacoes');
+    expect(find.text('m***a'), findsNothing);
+    await tester.tap(find.text('Ver mais avaliações'));
+    await tester.pump();
+    expect(find.text('m***a'), findsOneWidget);
+    await tester.tap(find.text('Útil (3)'));
+    await tester.pump();
+    expect(find.text('Útil (4)'), findsOneWidget);
 
     // Sem tamanho: nada entra no carrinho e o erro aparece.
     await tester.tap(find.text('ADICIONAR AO CARRINHO'));
@@ -72,6 +126,18 @@ void main() {
     expect(find.text('Carrinho (1)'), findsOneWidget);
     expect(find.text('FINALIZAR (1)'), findsOneWidget);
     await shot(tester, '5_carrinho');
+
+    // O filtro do carrinho aparece a partir de dois itens e não altera o total.
+    expect(find.text('Todos (1)'), findsNothing);
+    cart.add(products[2], 'G', 'Preto');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Em oferta (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Calça Jeans Wide Estampada'), findsNothing);
+    expect(find.text('FINALIZAR (2)'), findsOneWidget);
+    await shot(tester, '12_carrinho_filtro');
+    cart.remove(cart.items.last);
+    await tester.pumpAndSettle();
 
     // Remover e desfazer.
     await tester.tap(find.byTooltip('Remover item'));
