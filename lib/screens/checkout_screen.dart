@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data.dart';
 import '../widgets.dart';
+import 'address_screen.dart';
 
 const _couponCode = 'BEMVINDO10';
 
@@ -16,6 +17,7 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _addressKey = GlobalKey();
+  Address _address = defaultAddress;
   DateTime? _birthDate;
   bool _birthError = false;
   int _payment = 0;
@@ -47,6 +49,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _birthError = false;
     });
     toast(context, 'Data de nascimento salva');
+  }
+
+  Future<void> _editAddress() async {
+    final edited = await Navigator.push<Address>(
+      context,
+      MaterialPageRoute(builder: (_) => AddressScreen(address: _address)),
+    );
+    if (edited == null || !mounted) return;
+    setState(() => _address = edited);
+    toast(context, 'Endereço salvo');
   }
 
   Future<void> _editCoupon() async {
@@ -103,16 +115,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 key: _addressKey,
                 title: 'Endereço de entrega',
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Icon(Icons.location_on_outlined, size: 22),
-                    SizedBox(width: 10),
+                  Row(children: [
+                    const Icon(Icons.location_on_outlined, size: 22),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Maria Souza  ·  (41) 99999-0000', style: TextStyle(fontWeight: FontWeight.w600)),
-                        SizedBox(height: 2),
-                        Text('Rua das Flores, 123 — Curitiba, PR — 80000-000', style: TextStyle(color: muted, fontSize: 13)),
+                        Text(_address.contact, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text(_address.line, style: const TextStyle(color: muted, fontSize: 13)),
                       ]),
                     ),
+                    TextButton(onPressed: _editAddress, child: const Text('Alterar', style: TextStyle(color: ink))),
                   ]),
                   const SizedBox(height: 12),
                   if (born == null)
