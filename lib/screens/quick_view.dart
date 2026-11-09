@@ -46,7 +46,7 @@ class _QuickViewState extends State<_QuickView> {
     // O painel fecha antes de o atalho ser usado, então a navegação é
     // guardada aqui.
     final nav = Navigator.of(context);
-    toast(context, 'Adicionado ao carrinho', action: 'VER CARRINHO', onAction: () {
+    toast(context, 'Adicionado ao carrinho', icon: Icons.check_circle, iconColor: const Color(0xFF4CC38A), action: 'VER CARRINHO', onAction: () {
       nav.popUntil((r) => r.isFirst);
       tabIndex.value = 2;
     });

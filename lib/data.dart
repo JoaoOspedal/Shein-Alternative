@@ -107,7 +107,20 @@ const products = <Product>[
 String brl(double v) => 'R\$ ${v.toStringAsFixed(2).replaceAll('.', ',')}';
 
 /// Aba ativa da navegação inferior (0 Loja, 1 Categorias, 2 Carrinho, 3 Perfil).
-final tabIndex = ValueNotifier<int>(0);
+/// Aba atual, lembrando a anterior para a seta de voltar do carrinho.
+class TabNotifier extends ValueNotifier<int> {
+  TabNotifier() : super(0);
+
+  int previous = 0;
+
+  @override
+  set value(int v) {
+    if (v != super.value) previous = super.value;
+    super.value = v;
+  }
+}
+
+final tabIndex = TabNotifier();
 
 class CartItem {
   final Product product;

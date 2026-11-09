@@ -30,7 +30,7 @@ class _ProductScreenState extends State<ProductScreen> {
     }
     cart.add(widget.product, _size!, _color);
     // H1: confirmação da ação, com atalho para o próximo passo.
-    toast(context, 'Adicionado ao carrinho', action: 'VER CARRINHO', onAction: () => goToTab(context, 2));
+    toast(context, 'Adicionado ao carrinho', icon: Icons.check_circle, iconColor: const Color(0xFF4CC38A), action: 'VER CARRINHO', onAction: () => goToTab(context, 2));
   }
 
   void _scrollTo(GlobalKey key) =>

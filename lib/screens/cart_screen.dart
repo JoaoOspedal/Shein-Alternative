@@ -15,11 +15,24 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   bool _onlySale = false;
 
-  void _remove(BuildContext context, CartItem item) {
+  Future<void> _remove(BuildContext context, CartItem item) async {
+    // H5: confirmação curta, mostrando qual item sai.
+    final ok = await confirm(
+      context,
+      leading: SizedBox(width: 64, child: ProductImage(item.product, ratio: 1)),
+      title: 'Remover este item?',
+      message: '${item.product.name}\n${item.variant}',
+      confirmLabel: 'Remover',
+    );
+    if (!ok || !context.mounted) return;
     final index = cart.remove(item);
-    // H3/H5: remoção direta, com desfazer.
-    toast(context, 'Item removido do carrinho', action: 'DESFAZER', onAction: () => cart.insert(index, item));
+    // H3: mesmo confirmado, a remoção pode ser desfeita.
+    toast(context, 'Item removido do carrinho',
+        icon: Icons.delete_outline, action: 'DESFAZER', onAction: () => cart.insert(index, item));
   }
+
+  // H3: a seta volta para a aba de onde o usuário veio.
+  Widget get _back => BackButton(onPressed: () => tabIndex.value = tabIndex.previous == 2 ? 0 : tabIndex.previous);
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +41,7 @@ class _CartScreenState extends State<CartScreen> {
       builder: (context, _) {
         if (cart.items.isEmpty) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Carrinho')),
+            appBar: AppBar(leading: _back, title: const Text('Carrinho')),
             body: EmptyState(
               icon: Icons.shopping_cart_outlined,
               title: 'Seu carrinho está vazio',
@@ -45,7 +58,7 @@ class _CartScreenState extends State<CartScreen> {
         final filtering = canFilter && _onlySale;
         final shown = filtering ? sale : cart.items;
         return Scaffold(
-          appBar: AppBar(title: Text('Carrinho (${cart.count})')),
+          appBar: AppBar(leading: _back, title: Text('Carrinho (${cart.count})')),
           body: ListView(
             children: [
               // H1: uma mensagem de frete com progresso, no lugar de duas

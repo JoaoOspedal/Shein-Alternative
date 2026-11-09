@@ -22,15 +22,78 @@ void goToTab(BuildContext context, int index) {
   tabIndex.value = index;
 }
 
-void toast(BuildContext context, String message, {String? action, VoidCallback? onAction}) {
+/// Aviso curto no estilo do app: fundo escuro, cantos de 4 px, ícone
+/// opcional e ação em caixa alta.
+void toast(BuildContext context, String message, {IconData? icon, Color iconColor = Colors.white, String? action, VoidCallback? onAction}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
-      content: Text(message),
+      content: Row(children: [
+        if (icon != null) ...[Icon(icon, size: 20, color: iconColor), const SizedBox(width: 10)],
+        Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500))),
+      ]),
+      backgroundColor: ink.withValues(alpha: 0.94),
       behavior: SnackBarBehavior.floating,
+      elevation: 0,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: EdgeInsets.fromLTRB(14, 4, action == null ? 14 : 4, 4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       duration: const Duration(seconds: 4),
-      action: action == null ? null : SnackBarAction(label: action, onPressed: onAction ?? () {}),
+      action: action == null
+          ? null
+          : SnackBarAction(label: action, textColor: Colors.white, onPressed: onAction ?? () {}),
     ));
+}
+
+/// H5: confirmação pequena antes de uma ação destrutiva. Devolve true se o
+/// usuário confirmar.
+Future<bool> confirm(
+  BuildContext context, {
+  required String title,
+  String? message,
+  Widget? leading,
+  String confirmLabel = 'Confirmar',
+  String cancelLabel = 'Cancelar',
+}) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (leading != null) ...[Center(child: leading), const SizedBox(height: 14)],
+          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: ink)),
+          if (message != null) ...[
+            const SizedBox(height: 6),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: muted)),
+          ],
+          const SizedBox(height: 20),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(42)),
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(cancelLabel.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(42)),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(confirmLabel.toUpperCase()),
+              ),
+            ),
+          ]),
+        ]),
+      ),
+    ),
+  );
+  return ok ?? false;
 }
 
 /// Preço no estilo da Shein: "R$" e centavos menores que a parte inteira.

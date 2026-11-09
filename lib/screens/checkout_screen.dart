@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data.dart';
 import '../widgets.dart';
 import 'address_screen.dart';
+import 'profile_screen.dart' show HelpScreen;
 
 const _couponCode = 'BEMVINDO10';
 
@@ -30,8 +31,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     (Icons.account_balance_wallet_outlined, 'PayPal', 'Você conclui na conta PayPal'),
   ];
 
+  static const _scheduledFee = 19.90;
+  static const _scheduleDays = ['Seg, 20 out', 'Ter, 21 out', 'Qua, 22 out'];
+  bool _scheduled = false;
+  int _scheduleDay = 0;
+
   double get _couponValue => _coupon ? cart.subtotal * 0.10 : 0;
-  double get _total => cart.subtotal - _couponValue + cart.shipping;
+  double get _shippingValue => _scheduled ? _scheduledFee : cart.shipping;
+  double get _total => cart.subtotal - _couponValue + _shippingValue;
 
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
@@ -80,7 +87,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: Colors.white,
         title: const Text('Fim do protótipo'),
-        content: Text('O fluxo termina aqui, no passo anterior ao pagamento de ${brl(_total)} via ${_payments[_payment].$2}.'),
+        content: Text('O fluxo termina aqui, no passo anterior ao pagamento de ${brl(_total)} via ${_payments[_payment].$2}'
+            '${_scheduled ? ', com entrega agendada para ${_scheduleDays[_scheduleDay]}' : ''}.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Revisar pedido')),
           TextButton(onPressed: () => goToTab(context, 0), child: const Text('Voltar à loja')),
@@ -186,22 +194,56 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
               // H2/H4: "Frete grátis" em português e três linhas de envio
               // reunidas em uma.
+              // H4: as duas opções de frete usam o mesmo controle da forma
+              // de pagamento; o dia só aparece quando o agendado é escolhido.
               Section(
                 title: 'Envio',
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.local_shipping_outlined, size: 22),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Entrega padrão', style: TextStyle(fontWeight: FontWeight.w600)),
-                      SizedBox(height: 2),
-                      Text('Chega entre 17 e 25 de outubro', style: TextStyle(color: muted, fontSize: 13)),
-                      Text('Reembolso em caso de extravio ou dano', style: TextStyle(color: muted, fontSize: 13)),
-                    ]),
-                  ),
-                  Text(cart.shipping == 0 ? 'Frete grátis' : brl(cart.shipping),
-                      style: TextStyle(fontWeight: FontWeight.w700, color: cart.shipping == 0 ? good : ink)),
-                ]),
+                child: RadioGroup<bool>(
+                  groupValue: _scheduled,
+                  onChanged: (v) => setState(() => _scheduled = v!),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    RadioListTile<bool>(
+                      value: false,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: ink,
+                      secondary: Text(cart.shipping == 0 ? 'Grátis' : brl(cart.shipping),
+                          style: TextStyle(fontWeight: FontWeight.w700, color: cart.shipping == 0 ? good : ink)),
+                      title: const Text('Entrega padrão', style: TextStyle(fontSize: 15)),
+                      subtitle: const Text('Chega entre 17 e 25 de outubro', style: TextStyle(color: muted)),
+                    ),
+                    RadioListTile<bool>(
+                      value: true,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: ink,
+                      secondary: Text(brl(_scheduledFee), style: const TextStyle(fontWeight: FontWeight.w700)),
+                      title: const Text('Entrega agendada', style: TextStyle(fontSize: 15)),
+                      subtitle: const Text('Você escolhe o dia, das 8h às 18h', style: TextStyle(color: muted)),
+                    ),
+                    if (_scheduled)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 48, bottom: 4),
+                        child: Wrap(spacing: 8, runSpacing: 8, children: [
+                          for (var i = 0; i < _scheduleDays.length; i++)
+                            ChoiceChip(
+                              label: Text(_scheduleDays[i]),
+                              selected: _scheduleDay == i,
+                              showCheckmark: false,
+                              selectedColor: ink,
+                              backgroundColor: Colors.white,
+                              side: BorderSide(color: _scheduleDay == i ? ink : line),
+                              labelStyle: TextStyle(color: _scheduleDay == i ? Colors.white : ink, fontSize: 13),
+                              onSelected: (_) => setState(() => _scheduleDay = i),
+                            ),
+                        ]),
+                      ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: Text('Reembolso em caso de extravio ou dano', style: TextStyle(color: muted, fontSize: 13)),
+                    ),
+                  ]),
+                ),
               ),
               // H4/H8: três formas de pagamento distintas (o original repete
               // o mesmo cartão e o Pix em linhas separadas).
@@ -248,7 +290,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     Padding(padding: const EdgeInsets.only(left: 12), child: _row('Promoções', '- ${brl(cart.discount)}')),
                     if (_coupon) Padding(padding: const EdgeInsets.only(left: 12), child: _row('Cupom', '- ${brl(_couponValue)}')),
                   ],
-                  _row('Frete', cart.shipping == 0 ? 'Grátis' : brl(cart.shipping), color: cart.shipping == 0 ? good : null),
+                  _row(_scheduled ? 'Frete agendado' : 'Frete', _shippingValue == 0 ? 'Grátis' : brl(_shippingValue),
+                      color: _shippingValue == 0 ? good : null),
                   if (_breakdown) Padding(padding: const EdgeInsets.only(left: 12), child: _row('Impostos (ICMS e importação)', 'Inclusos')),
                   const Divider(height: 16),
                   _row('Total', brl(_total), strong: true),
@@ -258,6 +301,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       style: TextButton.styleFrom(padding: EdgeInsets.zero, foregroundColor: ink),
                       onPressed: () => setState(() => _breakdown = !_breakdown),
                       child: Text(_breakdown ? 'Ocultar detalhes' : 'Ver detalhes do valor', style: const TextStyle(decoration: TextDecoration.underline)),
+                    ),
+                  ),
+                  // H10: ajuda a um toque no momento de decidir a compra.
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, foregroundColor: ink),
+                      onPressed: () => push(context, const HelpScreen()),
+                      icon: const Icon(Icons.help_outline, size: 18),
+                      label: const Text('Dúvidas sobre o pedido? Fale com a ajuda', style: TextStyle(decoration: TextDecoration.underline)),
                     ),
                   ),
                 ]),
