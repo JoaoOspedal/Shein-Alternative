@@ -32,8 +32,10 @@ void toast(BuildContext context, String message, {IconData? icon, Color iconColo
         if (icon != null) ...[Icon(icon, size: 20, color: iconColor), const SizedBox(width: 10)],
         Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500))),
       ]),
-      backgroundColor: ink.withValues(alpha: 0.94),
+      backgroundColor: ink,
       behavior: SnackBarBehavior.floating,
+      // A ação fica na mesma linha da mensagem.
+      actionOverflowThreshold: 1,
       elevation: 0,
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: EdgeInsets.fromLTRB(14, 4, action == null ? 14 : 4, 4),

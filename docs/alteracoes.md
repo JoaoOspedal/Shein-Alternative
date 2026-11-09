@@ -71,6 +71,53 @@ A entrega padrão continua grátis acima de R$ 199,00 e custa R$ 12,00 abaixo di
 
 O novo estilo vale para todas as notificações do app. Só as do carrinho têm ícone.
 
+## Figuras
+
+As telas da segunda versão ficam em `docs/telas/v2/`. As da primeira versão continuam em `docs/telas/`, para comparação. A numeração segue a da primeira versão: as figuras de 1 a 12 mostram as mesmas telas, agora com as alterações, e as de 13 a 18 são novas.
+
+| Figura | Tela | O que mostra |
+|---|---|---|
+| `5_carrinho.png` | Carrinho | Seta de voltar no topo |
+| `6_finalizar.png` | Finalização | Botão "Alterar" do endereço e as duas opções de frete |
+| `7_finalizar_resumo.png` | Finalização | Resumo com o link para a ajuda |
+| `13_produto_adicionado.png` | Produto | Notificação de item adicionado no novo estilo |
+| `14_carrinho_confirmar_remocao.png` | Carrinho | Janela de confirmação ao remover um item |
+| `15_carrinho_removido.png` | Carrinho vazio | Notificação de item removido, com "DESFAZER", e seta de voltar |
+| `16_endereco.png` | Endereço | Tela de edição com os dados atuais |
+| `17_endereco_erros.png` | Endereço | Mensagens de erro de telefone, CEP, número e UF |
+| `18_finalizar_entrega_agendada.png` | Finalização | Entrega agendada escolhida, com os dias disponíveis |
+
+As figuras são geradas pelo teste de fluxo (`test/flow_test.dart`), que também verifica cada alteração:
+
+```
+flutter test --dart-define=SHOTS=true --update-goldens
+```
+
+## Resultado do teste de fluxo
+
+Executado em 9 de novembro de 2026 com Flutter 3.47.7 (canal stable), pelo comando `flutter test`.
+
+```
+00:00 +0: fluxo de compra até o passo anterior ao pagamento
+00:03 +1: All tests passed!
+```
+
+O teste passou (código de saída 0). Além do fluxo da primeira versão, ele verifica:
+
+| Verificação | Resultado esperado |
+|---|---|
+| Item adicionado ao carrinho | Notificação "Adicionado ao carrinho" com ícone de check |
+| Seta de voltar do carrinho | Volta para a aba Loja |
+| Lixeira, depois "CANCELAR" | Janela "Remover este item?" fecha e o item continua no carrinho |
+| Lixeira, depois "REMOVER" | Carrinho vazio, notificação "Item removido do carrinho" e seta de voltar visível |
+| "DESFAZER" | O item volta ao carrinho |
+| Endereço com telefone, CEP, número e UF inválidos | As quatro mensagens de erro aparecem e a tela não fecha |
+| Endereço corrigido | Volta à finalização com o novo endereço e o CEP no formato 81200-100 |
+| Entrega agendada | Os dias aparecem só com a opção marcada e o resumo mostra "Frete agendado" |
+| Volta para a entrega padrão | Os dias somem |
+| Link "Dúvidas sobre o pedido? Fale com a ajuda" | Abre a tela de Ajuda, e a seta volta para a finalização |
+| "IR PARA PAGAMENTO" com a data de nascimento preenchida | Mostra "Fim do protótipo" |
+
 ## Arquivos alterados
 
 | Arquivo | Alteração |
@@ -82,3 +129,4 @@ O novo estilo vale para todas as notificações do app. Só as do carrinho têm 
 | `lib/data.dart` | Registro da aba anterior, usado pela seta de voltar do carrinho |
 | `lib/screens/product_screen.dart` | Ícone na notificação de item adicionado |
 | `lib/screens/quick_view.dart` | Ícone na notificação de item adicionado |
+| `test/flow_test.dart` | Fluxo cobrindo as alterações e figuras gravadas em `docs/telas/v2/` |

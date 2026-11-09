@@ -185,4 +185,4 @@ O perfil reúne os favoritos e uma tela de ajuda com cinco perguntas sobre taman
 flutter test --dart-define=SHOTS=true --update-goldens
 ```
 
-O comando percorre o fluxo de compra e grava as imagens em `docs/telas/`.
+O comando percorre o fluxo de compra e grava as imagens em `docs/telas/v2/`. As imagens da primeira versão continuam em `docs/telas/` e não são regravadas. As alterações da segunda versão estão em [alteracoes_carrinho_finalizacao.md](alteracoes.md).
